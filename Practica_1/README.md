@@ -24,11 +24,11 @@ SG-FOOD es una empresa que gestiona la compra, distribución y comercialización
 
 ## 3. DISEÑO DE MODELO MULTIDIMENSIONAL
 
-Se eligió un **modelo estrella** por su simplicidad y eficiencia en consultas OLAP.
+Se eligió un **modelo constelacion** por su simplicidad y eficiencia en consultas OLAP.
 
 ### Diseño representado en diagrama
 
-![alt text](image.png)
+![alt text](Diagrama.png)
 
 ### Modelo SQL
 
