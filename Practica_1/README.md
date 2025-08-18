@@ -33,77 +33,104 @@ Se eligió un **modelo constelacion** por su simplicidad y eficiencia en consult
 ### Modelo SQL
 
 ```
+-- ============================
+-- Limpieza previa de tablas
+-- ============================
+IF OBJECT_ID('dbo.Hecho_Compras')  IS NOT NULL DROP TABLE dbo.Hecho_Compras;
+IF OBJECT_ID('dbo.Hecho_Ventas')   IS NOT NULL DROP TABLE dbo.Hecho_Ventas;
+
+IF OBJECT_ID('dbo.Dim_Proveedor')  IS NOT NULL DROP TABLE dbo.Dim_Proveedor;
+IF OBJECT_ID('dbo.Dim_Cliente')    IS NOT NULL DROP TABLE dbo.Dim_Cliente;
+IF OBJECT_ID('dbo.Dim_Sucursal')   IS NOT NULL DROP TABLE dbo.Dim_Sucursal;
+IF OBJECT_ID('dbo.Dim_Producto')   IS NOT NULL DROP TABLE dbo.Dim_Producto;
+IF OBJECT_ID('dbo.Dim_Fecha')      IS NOT NULL DROP TABLE dbo.Dim_Fecha;
+
+-- ============================
 -- Dimensión Fecha
-CREATE TABLE Dim_Fecha (
-    IdFecha INT PRIMARY KEY,
-    Fecha DATE,
-    Anio INT,
-    Mes INT,
-    Dia INT
+-- ============================
+CREATE TABLE dbo.Dim_Fecha (
+    IdFecha INT IDENTITY(1,1) PRIMARY KEY,      -- AAAAMMDD
+    Fecha   DATE       NOT NULL,
+    Anio    INT        NOT NULL,
+    Mes     INT        NOT NULL,
+    Dia     INT        NOT NULL
 );
 
+-- ============================
 -- Dimensión Producto
-CREATE TABLE Dim_Producto (
-    IdProducto INT PRIMARY KEY,
-    CodProducto VARCHAR(50),
-    NombreProducto VARCHAR(100),
-    MarcaProducto VARCHAR(50),
-    Categoria VARCHAR(50)
+-- ============================
+CREATE TABLE dbo.Dim_Producto (
+    IdProducto      INT IDENTITY(1,1) PRIMARY KEY,
+    CodProducto     VARCHAR(50)  NOT NULL,
+    NombreProducto  VARCHAR(100) NULL,
+    MarcaProducto   VARCHAR(50)  NULL,
+    Categoria       VARCHAR(50)  NULL
 );
 
+-- ============================
 -- Dimensión Sucursal
-CREATE TABLE Dim_Sucursal (
-    IdSucursal INT PRIMARY KEY,
-    CodSucursal VARCHAR(50),
-    NombreSucursal VARCHAR(100),
-    Region VARCHAR(50),
-    Departamento VARCHAR(50)
+-- ============================
+CREATE TABLE dbo.Dim_Sucursal (
+    IdSucursal       INT IDENTITY(1,1) PRIMARY KEY,
+    CodSucursal      VARCHAR(50)  NOT NULL,
+    NombreSucursal   VARCHAR(100) NULL,
+    Region           VARCHAR(50)  NULL,
+    Departamento     VARCHAR(50)  NULL
 );
 
--- Dimensión Cliente (solo para ventas)
-CREATE TABLE Dim_Cliente (
-    IdCliente INT PRIMARY KEY,
-    CodCliente VARCHAR(50),
-    NombreCliente VARCHAR(100),
-    TipoCliente VARCHAR(50)
+-- ============================
+-- Dimensión Cliente
+-- ============================
+CREATE TABLE dbo.Dim_Cliente (
+    IdCliente      INT IDENTITY(1,1) PRIMARY KEY,
+    CodCliente     VARCHAR(50)  NOT NULL,
+    NombreCliente  VARCHAR(100) NULL,
+    TipoCliente    VARCHAR(50)  NULL
 );
 
--- Dimensión Proveedor (solo para compras)
-CREATE TABLE Dim_Proveedor (
-    IdProveedor INT PRIMARY KEY,
-    CodProveedor VARCHAR(50),
-    NombreProveedor VARCHAR(100)
+-- ============================
+-- Dimensión Proveedor
+-- ============================
+CREATE TABLE dbo.Dim_Proveedor (
+    IdProveedor      INT IDENTITY(1,1) PRIMARY KEY,
+    CodProveedor     VARCHAR(50)  NOT NULL,
+    NombreProveedor  VARCHAR(100) NULL
 );
 
--- Tabla de hechos de ventas
-CREATE TABLE Hecho_Ventas (
-    IdVenta INT PRIMARY KEY IDENTITY(1,1),
-    IdFecha INT NOT NULL,
-    IdProducto INT NOT NULL,
-    IdSucursal INT NOT NULL,
-    IdCliente INT NOT NULL,
-    Unidades INT,
-    PrecioUnitario DECIMAL(18,2),
-    FOREIGN KEY (IdFecha) REFERENCES Dim_Fecha(IdFecha),
-    FOREIGN KEY (IdProducto) REFERENCES Dim_Producto(IdProducto),
-    FOREIGN KEY (IdSucursal) REFERENCES Dim_Sucursal(IdSucursal),
-    FOREIGN KEY (IdCliente) REFERENCES Dim_Cliente(IdCliente)
+-- ============================
+-- Hecho Ventas
+-- ============================
+CREATE TABLE dbo.Hecho_Ventas (
+    IdVenta        INT IDENTITY(1,1) PRIMARY KEY,
+    IdFecha        INT NOT NULL,
+    IdProducto     INT NOT NULL,
+    IdSucursal     INT NOT NULL,
+    IdCliente      INT NOT NULL,
+    Unidades       INT             NULL,
+    PrecioUnitario DECIMAL(18,2)   NULL,
+    FOREIGN KEY (IdFecha)    REFERENCES dbo.Dim_Fecha(IdFecha),
+    FOREIGN KEY (IdProducto) REFERENCES dbo.Dim_Producto(IdProducto),
+    FOREIGN KEY (IdSucursal) REFERENCES dbo.Dim_Sucursal(IdSucursal),
+    FOREIGN KEY (IdCliente)  REFERENCES dbo.Dim_Cliente(IdCliente)
 );
 
--- Tabla de hechos de compras
-CREATE TABLE Hecho_Compras (
-    IdCompra INT PRIMARY KEY IDENTITY(1,1),
-    IdFecha INT NOT NULL,
-    IdProducto INT NOT NULL,
-    IdSucursal INT NOT NULL,
-    IdProveedor INT NOT NULL,
-    Unidades INT,
-    CostoUnitario DECIMAL(18,2),
-    FOREIGN KEY (IdFecha) REFERENCES Dim_Fecha(IdFecha),
-    FOREIGN KEY (IdProducto) REFERENCES Dim_Producto(IdProducto),
-    FOREIGN KEY (IdSucursal) REFERENCES Dim_Sucursal(IdSucursal),
-    FOREIGN KEY (IdProveedor) REFERENCES Dim_Proveedor(IdProveedor)
+-- ============================
+-- Hecho Compras
+-- ============================
+CREATE TABLE dbo.Hecho_Compras (
+    IdCompra      INT IDENTITY(1,1) PRIMARY KEY,
+    IdFecha       INT NOT NULL,
+    IdProducto    INT NOT NULL,
+    IdSucursal    INT NOT NULL,
+    IdProveedor   INT NOT NULL,
+    Unidades      INT             NULL,
+    CostoUnitario DECIMAL(18,2)   NULL,
+    FOREIGN KEY (IdFecha)     REFERENCES dbo.Dim_Fecha(IdFecha),
+    FOREIGN KEY (IdProducto)  REFERENCES dbo.Dim_Producto(IdProducto),
+    FOREIGN KEY (IdSucursal)  REFERENCES dbo.Dim_Sucursal(IdSucursal),
+    FOREIGN KEY (IdProveedor) REFERENCES dbo.Dim_Proveedor(IdProveedor)
 );
+
 
 ```
 

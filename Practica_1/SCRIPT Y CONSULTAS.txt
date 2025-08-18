@@ -1,0 +1,204 @@
+============================================================================================  SCIPT ============================================================================================
+
+-- ============================
+-- Limpieza previa de tablas
+-- ============================
+IF OBJECT_ID('dbo.Hecho_Compras')  IS NOT NULL DROP TABLE dbo.Hecho_Compras;
+IF OBJECT_ID('dbo.Hecho_Ventas')   IS NOT NULL DROP TABLE dbo.Hecho_Ventas;
+
+IF OBJECT_ID('dbo.Dim_Proveedor')  IS NOT NULL DROP TABLE dbo.Dim_Proveedor;
+IF OBJECT_ID('dbo.Dim_Cliente')    IS NOT NULL DROP TABLE dbo.Dim_Cliente;
+IF OBJECT_ID('dbo.Dim_Sucursal')   IS NOT NULL DROP TABLE dbo.Dim_Sucursal;
+IF OBJECT_ID('dbo.Dim_Producto')   IS NOT NULL DROP TABLE dbo.Dim_Producto;
+IF OBJECT_ID('dbo.Dim_Fecha')      IS NOT NULL DROP TABLE dbo.Dim_Fecha;
+IF OBJECT_ID('dbo.PivoteCompras')      IS NOT NULL DROP TABLE dbo.PivoteCompras;
+
+-- ============================
+-- Dimensión Fecha
+-- ============================
+CREATE TABLE dbo.Dim_Fecha (
+    IdFecha INT IDENTITY(1,1) PRIMARY KEY,      -- AAAAMMDD
+    Fecha   DATE       NOT NULL,
+    Anio    INT        NOT NULL,
+    Mes     INT        NOT NULL,
+    Dia     INT        NOT NULL
+);
+
+-- ============================
+-- Dimensión Producto
+-- ============================
+CREATE TABLE dbo.Dim_Producto (
+    IdProducto      INT IDENTITY(1,1) PRIMARY KEY,
+    CodProducto     VARCHAR(200)  NOT NULL,
+    NombreProducto  VARCHAR(200) NULL,
+    MarcaProducto   VARCHAR(200)  NULL,
+    Categoria       VARCHAR(200)  NULL
+);
+
+-- ============================
+-- Dimensión Sucursal
+-- ============================
+CREATE TABLE dbo.Dim_Sucursal (
+    IdSucursal       INT IDENTITY(1,1) PRIMARY KEY,
+    CodSucursal      VARCHAR(200)  NOT NULL,
+    NombreSucursal   VARCHAR(200) NULL,
+    Region           VARCHAR(200)  NULL,
+    Departamento     VARCHAR(200)  NULL
+);
+
+-- ============================
+-- Dimensión Cliente
+-- ============================
+CREATE TABLE dbo.Dim_Cliente (
+    IdCliente      INT IDENTITY(1,1) PRIMARY KEY,
+    CodCliente     VARCHAR(200)  NOT NULL,
+    NombreCliente  VARCHAR(200) NULL,
+    TipoCliente    VARCHAR(200)  NULL
+);
+
+-- ============================
+-- Dimensión Proveedor
+-- ============================
+CREATE TABLE dbo.Dim_Proveedor (
+    IdProveedor      INT IDENTITY(1,1) PRIMARY KEY,
+    CodProveedor     VARCHAR(200)  NOT NULL,
+    NombreProveedor  VARCHAR(200) NULL
+);
+
+-- ============================
+-- Hecho Ventas
+-- ============================
+CREATE TABLE dbo.Hecho_Ventas (
+    IdVenta        INT IDENTITY(1,1) PRIMARY KEY,
+    IdFecha        INT NOT NULL,
+    IdProducto     INT NOT NULL,
+    IdSucursal     INT NOT NULL,
+    IdCliente      INT NOT NULL,
+    Unidades       INT             NULL,
+    PrecioUnitario DECIMAL(18,2)   NULL,
+);
+
+-- ============================
+-- Hecho Compras
+-- ============================
+CREATE TABLE dbo.Hecho_Compras (
+    IdCompra      INT IDENTITY(1,1) PRIMARY KEY,
+    IdFecha       DATE NOT NULL,
+    IdProducto    VARCHAR(200) NOT NULL,
+    IdSucursal    VARCHAR(200) NOT NULL,
+    IdProveedor   VARCHAR(200) NOT NULL,
+    Unidades      INT             NULL,
+    CostoUnitario DECIMAL(18,2)   NULL,
+);
+
+
+
+-- ============================
+-- PIVOTE COMPRAS
+-- ============================
+CREATE TABLE dbo.PivoteCompras (
+    IdCompra      INT IDENTITY(1,1) PRIMARY KEY,
+    IdFecha       DATE NOT NULL,
+    IdProducto    VARCHAR(200) NOT NULL,
+    IdSucursal    VARCHAR(200) NOT NULL,
+    IdProveedor   VARCHAR(200) NOT NULL,
+    Unidades      INT             NULL,
+    CostoUnitario DECIMAL(18,2)   NULL,
+);
+
+
+
+============================================================================================  CONSULTAS ============================================================================================
+
+--COMPRAS POR AÑO
+SELECT YEAR(IdFecha) AS Anio,
+       SUM(Unidades) AS TotalUnidades,
+       SUM(Unidades * CostoUnitario) AS TotalCompras
+FROM dbo.PivoteCompras
+GROUP BY YEAR(IdFecha)
+ORDER BY Anio;
+
+-- Ventas por año
+SELECT f.Anio,
+       SUM(v.Unidades) AS TotalUnidades,
+       SUM(v.Unidades * v.PrecioUnitario) AS TotalVentas
+FROM Hecho_Ventas v
+JOIN Dim_Fecha f ON v.IdFecha = f.IdFecha
+GROUP BY f.Anio
+ORDER BY f.Anio;
+
+
+
+2) Productos con pérdida
+
+SELECT p.CodProducto,
+       p.NombreProducto,
+       AVG(v.PrecioUnitario) AS PrecioPromedioVenta,
+       AVG(c.CostoUnitario)  AS CostoPromedioCompra
+FROM Dim_Producto p
+JOIN Hecho_Ventas  v ON v.IdProducto = p.IdProducto
+JOIN dbo.PivoteCompras c ON c.IdProducto = p.CodProducto
+GROUP BY p.CodProducto, p.NombreProducto
+HAVING AVG(v.PrecioUnitario) < AVG(c.CostoUnitario)
+ORDER BY p.CodProducto;
+
+
+
+
+
+3) Top 5 productos más vendidos
+
+SELECT TOP 5 p.CodProducto,
+       p.NombreProducto,
+       SUM(v.Unidades) AS TotalVendidas
+FROM Hecho_Ventas v
+JOIN Dim_Producto p ON v.IdProducto = p.IdProducto
+GROUP BY p.CodProducto, p.NombreProducto
+ORDER BY TotalVendidas DESC;
+
+
+
+4) Ingresos por región y año (ventas)
+
+
+SELECT s.Region,
+       f.Anio,
+       SUM(v.Unidades * v.PrecioUnitario) AS Ingresos
+FROM Hecho_Ventas v
+JOIN Dim_Sucursal s ON v.IdSucursal = s.IdSucursal
+JOIN Dim_Fecha   f ON v.IdFecha    = f.IdFecha
+GROUP BY s.Region, f.Anio
+ORDER BY s.Region, f.Anio;
+
+
+
+5) Proveedores con mayor volumen de compras
+
+SELECT TOP 5 pr.CodProveedor,
+       pr.NombreProveedor,
+       SUM(c.Unidades) AS TotalUnidadesCompradas,
+       SUM(c.Unidades * c.CostoUnitario) AS TotalMontoCompras
+FROM dbo.PivoteCompras c
+JOIN Dim_Proveedor pr ON c.IdProveedor = pr.CodProveedor
+GROUP BY pr.CodProveedor, pr.NombreProveedor
+ORDER BY TotalUnidadesCompradas DESC;
+
+
+===============================================================================  INSERTAR DATOS HECHOS COMPRA ============================================================================================
+
+INSERT INTO dbo.Hecho_Compras (
+    IdFecha, IdProducto, IdSucursal, IdProveedor, Unidades, CostoUnitario
+)
+SELECT p.IdFecha, p.IdProducto, p.IdSucursal, p.IdProveedor, p.Unidades, p.CostoUnitario
+FROM dbo.PivoteCompras p
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM dbo.Hecho_Compras h
+    WHERE h.IdFecha     = p.IdFecha
+      AND h.IdProducto  = p.IdProducto
+      AND h.IdSucursal  = p.IdSucursal
+      AND h.IdProveedor = p.IdProveedor
+);
+
+
+
